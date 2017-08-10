@@ -2,10 +2,6 @@ require 'mandrill'
 
 class EmailAutomationMailer < ActionMailer::Base
   def automation_email(params)
-    from = EmailAutomation.configuration.from_name +
-           '<' + EmailAutomation.configuration.from_email + '>',
-    reply_to = EmailAutomation.configuration.from_email
-
     prepare(params)
   end
 
@@ -14,10 +10,13 @@ class EmailAutomationMailer < ActionMailer::Base
   def prepare(params = {})
     template = mandrill_template(params[:template], params[:data])
     mail_params = {
-      to: params[:to],
-      subject: template[:subject],
       body: template[:body],
-      content_type: "text/html"
+      content_type: "text/html",
+      from: EmailAutomation.configuration.from_name +
+            '<' + EmailAutomation.configuration.from_email + '>',
+      reply_to: EmailAutomation.configuration.from_email,
+      subject: template[:subject],
+      to: params[:to]
     }
     unless params[:bcc].blank?
       mail_params[:bcc] = params[:bcc]

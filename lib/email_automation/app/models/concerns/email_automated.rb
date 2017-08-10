@@ -4,6 +4,7 @@ module EmailAutomation::EmailAutomated
   included do
     has_many :email_automations, as: :email_automated, class_name: "EmailAutomation::EmailAutomation"
     after_create :email_automation_init
+    scope :email_automation, (-> {})
 
     def email_automation_init
       email_automation_types.each do |automation_type|
@@ -45,20 +46,22 @@ module EmailAutomation::EmailAutomated
     end
 
     def email_automation_types
-      # list automation types (the list may be conditional)
+      # list automation types for initial automation creation
+      # the list may be conditional
       try(:ea_types) || []
     end
 
     def email_automation_handle_automation(automation)
       if automation.state &&
          automation.state_label != email_automation_initial_state_label &&
+         automation.state_label != email_automation_finish_state_label &&
          !automation.state.handled?
         begin
-          # EmailAutomationMailer.automation_email(
-          #   to: email_automation_mandrill_to(automation),
-          #   template: email_automation_mandrill_template(automation),
-          #   data: email_automation_mandrill_data(automation)
-          # ).deliver
+          EmailAutomationMailer.automation_email(
+            to: email_automation_mandrill_to(automation),
+            template: email_automation_mandrill_template(automation),
+            data: email_automation_mandrill_data(automation)
+          ).deliver_now
 
           puts "SENDING EMAIL"
           pp ({ to: email_automation_mandrill_to(automation),
@@ -66,14 +69,15 @@ module EmailAutomation::EmailAutomated
                 data: email_automation_mandrill_data(automation)
               })
           automation.state.handled!
-        rescue
+        rescue => e
+          pp e.message
         end
       end
     end
 
     def email_automation_handle_automations
-      email_automation_types.each do |automation_type|
-        automation = email_automations.find_by(automation_type: automation_type)
+      email_automations.each do |automation|
+        next if automation.state_label == email_automation_finish_state_label
         email_automation_handle_automation(automation)
       end
     end
@@ -86,8 +90,8 @@ module EmailAutomation::EmailAutomated
     end
 
     def email_automation_update_automations
-      email_automation_types.each do |automation_type|
-        automation = email_automations.find_by(automation_type: automation_type)
+      email_automations.each do |automation|
+        next if automation.state_label == email_automation_finish_state_label
         email_automation_update_automation(automation)
       end
     end
