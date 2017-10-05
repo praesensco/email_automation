@@ -51,11 +51,18 @@ module EmailAutomation::EmailAutomated
       try(:ea_types) || []
     end
 
+    def email_automation_handle_automation_allowed?(automation)
+      allowed = try(:ea_handle_automation_allowed?, automation)
+      allowed.nil? || !allowed.nil? && allowed
+    end
+
     def email_automation_handle_automation(automation)
-      if automation.state &&
-         automation.state_label != email_automation_initial_state_label &&
-         automation.state_label != email_automation_finish_state_label &&
-         !automation.state.handled?
+      if !email_automation_handle_automation_allowed?(automation)
+        automation.state.handled!
+      elsif automation.state &&
+            automation.state_label != email_automation_initial_state_label &&
+            automation.state_label != email_automation_finish_state_label &&
+            !automation.state.handled? &&
         begin
           EmailAutomationMailer.automation_email(
             to: email_automation_mandrill_to(automation),
