@@ -29,8 +29,14 @@ class EmailAutomationMailer < ActionMailer::Base
     merge_vars = attributes.map do |key, value|
       { name: key, content: value }
     end
+
+    subject = mandrill.templates.info(template_name)["subject"]
+    attributes.each do |key, value|
+      subject.gsub! "*|#{key}|*", value
+    end
+
     {
-      subject: mandrill.templates.info(template_name)["subject"],
+      subject: subject,
       body: mandrill.templates.render(template_name, [], merge_vars)["html"]
     }
   end
